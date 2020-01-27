@@ -8,7 +8,6 @@ using System.Net.Sockets;
 
 namespace BUS_DAA_SIGMA
 {
-
     static class User
     {
         public static List<Sender>  Senders { get; private set; }
@@ -33,6 +32,9 @@ namespace BUS_DAA_SIGMA
                     Sender connection = new Sender(newRemote);
                     connection.Connect();
                     Senders.Add(connection);
+
+                    MessageHeader handShake = new MessageHeader(MessageHeader.MessageType.TCPHANDSHAKE, Encoding.ASCII.GetBytes(Receiver.LocalEndPoint.Address.ToString() + "@" + Receiver.LocalEndPoint.Port.ToString()));
+                    Send(otherAddress, otherPort, handShake.ConvertToBytes());
                 }
                 else
                     UI.Print("You have been already connected to that host");
@@ -43,15 +45,43 @@ namespace BUS_DAA_SIGMA
             }
         }
 
-        private static void ReceiveMessage(IPEndPoint endPoint) => UI.Print(Encoding.ASCII.GetString(Receiver.ReceiveFrom(endPoint).Dequeue()));
+        private static void ReceiveMessage(IPEndPoint endPoint)
+        {
+            byte[] messageBytes = Receiver.ReceiveFrom(endPoint).Dequeue();
+            MessageHeader message = new MessageHeader(messageBytes);
+
+            switch (message.Signaling)
+            {
+                case MessageHeader.MessageType.TCPHANDSHAKE:
+                    HandleTCPHandShake(message.Payload);
+                    break;
+                default:
+                    UI.Print("Unrecognized signaling message");
+                    break;
+            }
+        }
 
         public static void Send(IPAddress otherAddress, int otherPort, byte[] message)
         {
-            var sender = Senders.FirstOrDefault(x => x.RemoteEndPoint.Address.ToString() == otherAddress.ToString() && x.RemoteEndPoint.Port == otherPort);
+            Sender sender = Senders.FirstOrDefault(x => x.RemoteEndPoint.Address.ToString() == otherAddress.ToString() && x.RemoteEndPoint.Port == otherPort);
             if (sender != null)
                 sender.Send(message);
             else
                 UI.Print("You cannot send message to disconnected host");
+        }
+
+        private static void HandleTCPHandShake(byte[] payload)
+        {
+            string remoteEndPoint    = Encoding.ASCII.GetString(payload).Replace("\0", "");
+            string[] splitedEndPoint = remoteEndPoint.Split('@');
+            try
+            {
+                Connect(IPAddress.Parse(splitedEndPoint[0]), int.Parse(splitedEndPoint[1]));
+            }
+            catch (Exception ex)
+            {
+                UI.Print(ex.Message);
+            }
         }
     }
 }
