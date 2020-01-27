@@ -13,6 +13,8 @@ namespace BUS_DAA_SIGMA
         public static List<Sender>  Senders { get; private set; }
         public static Receiver      Receiver { get; private set; }
 
+        private static List<Sigma>  _pendingSigmaTasks;
+
         static User()
         {
             Senders     = new List<Sender>();
@@ -63,6 +65,8 @@ namespace BUS_DAA_SIGMA
                 case MessageHeader.MessageType.POST:
                     HandlePost(endPoint, message.Payload);
                     break;
+                case MessageHeader.MessageType.SIGMA:
+                    break;
                 default:
                     UI.Print("Unrecognized signaling message");
                     break;
@@ -78,6 +82,7 @@ namespace BUS_DAA_SIGMA
                 UI.Print("You cannot send message to disconnected host");
         }
 
+        #region Handlers
         private static void HandleTCPHandShake(byte[] payload)
         {
             string remoteEndPoint    = Encoding.ASCII.GetString(payload).Replace("\0", "");
@@ -93,5 +98,6 @@ namespace BUS_DAA_SIGMA
         }
 
         private static void HandlePost(IPEndPoint other, byte[] payload) => UI.Print($"[{other.Address}:" + $"{other.Port}]" + Encoding.ASCII.GetString(payload).Replace("\0", ""));
+        #endregion
     }
 }

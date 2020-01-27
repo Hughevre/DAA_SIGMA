@@ -12,7 +12,8 @@ namespace BUS_DAA_SIGMA
         public enum MessageType
         {
             TCPHANDSHAKE,
-            POST
+            POST,
+            SIGMA
         }
 
         public MessageType      Signaling { get; private set; }
@@ -31,8 +32,8 @@ namespace BUS_DAA_SIGMA
         {
             try
             {
-                byte[] signalingBytes = new byte[_signalingLength];
-                byte[] payloadBytes = new byte[message.Length - _signalingLength];
+                byte[] signalingBytes   = new byte[_signalingLength];
+                byte[] payloadBytes     = new byte[message.Length - _signalingLength];
 
                 Buffer.BlockCopy(message, 0, signalingBytes, 0, _signalingLength);
                 Buffer.BlockCopy(message, _signalingLength, payloadBytes, 0, message.Length - _signalingLength);

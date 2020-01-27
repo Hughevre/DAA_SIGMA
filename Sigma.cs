@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Numerics;
+using System.Net;
 
 namespace BUS_DAA_SIGMA
 {
@@ -12,14 +13,18 @@ namespace BUS_DAA_SIGMA
         private readonly Random _random;
         private readonly int    _bigIntBufferLength;
 
-        private BigInteger _s;
-        private BigInteger _g;
-        private BigInteger _x;
+        private BigInteger      _s;
+        private BigInteger      _g;
+        private BigInteger      _x;
 
-        public Sigma()
+        private Sender          _connection;
+
+        public Sigma(Sender connection)
         {
             _random             = new Random();
             _bigIntBufferLength = 256;
+            _connection         = connection;
+            
         }
 
         public void BeginKeyExchange()
