@@ -27,7 +27,7 @@ namespace BUS_DAA_SIGMA
             try
             {
                 IPEndPoint newRemote = new IPEndPoint(otherAddress, otherPort);
-                if (!Senders.Any(x => x.RemoteEndPoint == newRemote))
+                if (!Senders.Any(x => x.RemoteEndPoint.Address.ToString() == otherAddress.ToString() && x.RemoteEndPoint.Port.ToString() == otherPort.ToString()))
                 {
                     Sender connection = new Sender(newRemote);
                     connection.Connect();
@@ -45,6 +45,11 @@ namespace BUS_DAA_SIGMA
             }
         }
 
+        public static void Disconnect()
+        {
+            //TO DO
+        }
+
         private static void ReceiveMessage(IPEndPoint endPoint)
         {
             byte[] messageBytes = Receiver.ReceiveFrom(endPoint).Dequeue();
@@ -54,6 +59,9 @@ namespace BUS_DAA_SIGMA
             {
                 case MessageHeader.MessageType.TCPHANDSHAKE:
                     HandleTCPHandShake(message.Payload);
+                    break;
+                case MessageHeader.MessageType.POST:
+                    HandlePost(endPoint, message.Payload);
                     break;
                 default:
                     UI.Print("Unrecognized signaling message");
@@ -83,5 +91,7 @@ namespace BUS_DAA_SIGMA
                 UI.Print(ex.Message);
             }
         }
+
+        private static void HandlePost(IPEndPoint other, byte[] payload) => UI.Print($"[{other.Address}:" + $"{other.Port}]" + Encoding.ASCII.GetString(payload).Replace("\0", ""));
     }
 }

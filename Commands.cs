@@ -53,7 +53,7 @@ namespace BUS_DAA_SIGMA
 
             try
             {
-                User.Send(IPAddress.Parse(address), int.Parse(port), Encoding.ASCII.GetBytes(message));
+                User.Send(IPAddress.Parse(address), int.Parse(port), new MessageHeader(MessageHeader.MessageType.POST, Encoding.ASCII.GetBytes(message)).ConvertToBytes());
             }
             catch (Exception ex)
             {

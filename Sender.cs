@@ -12,7 +12,7 @@ namespace BUS_DAA_SIGMA
     {
         public IPEndPoint LocalEndPoint { get; private set; }
         public IPEndPoint RemoteEndPoint { get; private set; }
-        
+
         private TcpClient       _sender;
         private NetworkStream   _stream;
 

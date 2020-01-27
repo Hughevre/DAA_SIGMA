@@ -11,7 +11,8 @@ namespace BUS_DAA_SIGMA
     {
         public enum MessageType
         {
-            TCPHANDSHAKE
+            TCPHANDSHAKE,
+            POST
         }
 
         public MessageType      Signaling { get; private set; }
