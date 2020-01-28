@@ -46,6 +46,8 @@
   <ItemGroup>
     <Compile Include="AESBox.cs" />
     <Compile Include="Commands.cs" />
+    <Compile Include="CryptoBox.cs" />
+    <Compile Include="Message.cs" />
     <Compile Include="MessageHeader.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

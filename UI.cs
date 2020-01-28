@@ -16,8 +16,8 @@ namespace BUS_DAA_SIGMA
 
         static UI()
         {
-            _screenW = Console.WindowWidth;
-            _screenH = Console.WindowHeight;
+            _screenW    = Console.WindowWidth;
+            _screenH    = Console.WindowHeight;
             _commanderH = (int)Math.Floor(_screenH * 0.8);
         }
 
@@ -54,14 +54,19 @@ namespace BUS_DAA_SIGMA
                 Console.Write("-");
             }
 
+            ClearCommanderArea();
+
+            Console.SetCursorPosition(0, _commanderH + 1);
+            Console.Write(">>");
+        }
+
+        private static void ClearCommanderArea()
+        {
             for (int i = _commanderH + 1; i < _commanderH + 4; i++)
             {
                 Console.SetCursorPosition(0, i);
                 ClearCurrentConsoleLine();
             }
-
-            Console.SetCursorPosition(0, _commanderH + 1);
-            Console.Write(">>");
         }
     }
 }

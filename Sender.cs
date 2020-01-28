@@ -16,6 +16,8 @@ namespace BUS_DAA_SIGMA
         private TcpClient       _sender;
         private NetworkStream   _stream;
 
+        public byte[]     SymmetricKey { get; set; }
+
         public Sender(IPEndPoint other)
         {
             LocalEndPoint    = new IPEndPoint(IPAddress.Parse("127.0.0.1"), TCPBox.SearchFreeTCPPort());

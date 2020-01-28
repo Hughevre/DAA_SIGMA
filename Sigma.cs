@@ -10,36 +10,65 @@ namespace BUS_DAA_SIGMA
 {
     class Sigma
     {
-        private readonly Random _random;
-        private readonly int    _bigIntBufferLength;
+        private readonly int    _sessionIDLength;
+        private readonly int    _privatePartLength;
 
-        private BigInteger      _s;
-        private BigInteger      _g;
-        private BigInteger      _x;
+        public Sender           _connection;
 
-        private Sender          _connection;
+        private BigInteger      _p; // GF prime
+        private BigInteger      _g; // GF generator
+        private BigInteger      _q; // GF order
+        private BigInteger      _s; // Session ID
+        private BigInteger      _x; // P's private part
 
         public Sigma(Sender connection)
         {
-            _random             = new Random();
-            _bigIntBufferLength = 256;
+            _sessionIDLength    = 256;
+            _privatePartLength  = 128;
             _connection         = connection;
+            _p                  = BigInteger.Parse(
+                CryptoBox.MODP_2048_256_p.
+                Replace(" ", string.Empty).
+                Replace("\r", string.Empty).
+                Replace("\n", string.Empty), System.Globalization.NumberStyles.AllowHexSpecifier);
+            _g                  = BigInteger.Parse(
+                CryptoBox.MODP_2048_256_g.
+                Replace(" ", string.Empty).
+                Replace("\r", string.Empty).
+                Replace("\n", string.Empty), System.Globalization.NumberStyles.AllowHexSpecifier);
+            _q                  = BigInteger.Parse(
+                CryptoBox.MODP_2048_256_q.
+                Replace(" ", string.Empty).
+                Replace("\r", string.Empty).
+                Replace("\n", string.Empty), System.Globalization.NumberStyles.AllowHexSpecifier);
+            _x                  = CryptoBox.GetRandomPositiveBigInteger(_privatePartLength);
+        }
+
+        public byte[] GetPHello()
+        {
+            _s = CryptoBox.GetRandomPositiveBigInteger(_sessionIDLength);
+            //P's private key is g^x mod p, thus it's size never...
+            byte[] ret = new byte[_sessionIDLength + _p.ToByteArray().Length];
+            var privateKey = BigInteger.ModPow(_g, _x, _p).ToByteArray();
+            Buffer.BlockCopy(_s.ToByteArray(), 0, ret, 0, _s.ToByteArray().Length);
+            Buffer.BlockCopy(privateKey, 0, ret, _sessionIDLength, privateKey.Length);
+
+            return ret;
+        }
+
+        /*
+         * https://crypto.stackexchange.com/questions/16196/what-is-a-generator
+         * 
+         * https://tools.ietf.org/html/rfc2631
+         * 
+         * https://tools.ietf.org/html/rfc8268
+         * 
+         * https://tools.ietf.org/html/rfc5114 
+         */
+
+        public void DispatchKeyExchange()
+        {
             
-        }
-
-        public void BeginKeyExchange()
-        {
-            _s = GetRandomPositiveBigInteger();
-            _g = new BigInteger();
-            _x = GetRandomPositiveBigInteger();
-        }
-
-        private BigInteger GetRandomPositiveBigInteger()
-        {
-            byte[] buffer = new byte[_bigIntBufferLength];
-            _random.NextBytes(buffer);
-            buffer[_bigIntBufferLength - 1] &= 0x7F; // Force sign bit to positive.  See https://docs.microsoft.com/en-us/dotnet/api/system.numerics.biginteger.-ctor.
-            return new BigInteger(buffer);
         }
     }
 }

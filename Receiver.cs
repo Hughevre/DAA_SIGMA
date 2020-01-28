@@ -10,17 +10,18 @@ namespace BUS_DAA_SIGMA
 {
     class Receiver
     {
-        public IPEndPoint           LocalEndPoint { get; private set; }
+        public IPEndPoint               LocalEndPoint { get; private set; }
         private Dictionary<IPEndPoint, Queue<byte[]>> _clientBuffer;
 
-        private TcpListener         _listener;
-        private readonly int        _serverBackLog;
+        private TcpListener             _listener;
+        private readonly int            _serverBackLog;
 
-        private List<Task>          _pendingConnections;
-        private readonly object     _clientLock;
+        private List<Task>              _pendingConnections;
+        private readonly object         _clientLock;
+        private readonly object         _bufferLock;
 
-        public delegate void        ReceiveHandler(IPEndPoint e);
-        public event ReceiveHandler MessageCameTriggered;
+        public delegate Task            RcvHandlerAsync(IPEndPoint e);
+        public event RcvHandlerAsync    MessageCameTriggered;
 
         public Receiver()
         {
@@ -29,6 +30,7 @@ namespace BUS_DAA_SIGMA
             _serverBackLog      = 32;
             _pendingConnections = new List<Task>();
             _clientLock         = new object();
+            _bufferLock         = new object();
         }
 
         public Task Listen()
@@ -78,7 +80,7 @@ namespace BUS_DAA_SIGMA
             return queue;
         }
 
-        private void OnMessageCame(IPEndPoint e) => MessageCameTriggered?.Invoke(e);
+        private async Task OnMessageCame(IPEndPoint e) => await MessageCameTriggered?.Invoke(e);
 
         private Task HandleConnection(TcpClient client)
         {
@@ -100,9 +102,9 @@ namespace BUS_DAA_SIGMA
                                 var queue = GetOrCreateQueue(remoteEndPoint);
                                 queue.Enqueue(buffer);
 
-                                _clientBuffer[(IPEndPoint)client.Client.RemoteEndPoint] = queue;
+                                lock(_bufferLock) _clientBuffer[(IPEndPoint)client.Client.RemoteEndPoint] = queue;
 
-                                OnMessageCame(remoteEndPoint);
+                                await OnMessageCame(remoteEndPoint);
                             }
                             catch (Exception ex)
                             {

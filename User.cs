@@ -14,11 +14,14 @@ namespace BUS_DAA_SIGMA
         public static Receiver      Receiver { get; private set; }
 
         private static List<Sigma>  _pendingSigmaTasks;
+        private static object       _lockPendingSigmas;
 
         static User()
         {
-            Senders     = new List<Sender>();
-            Receiver    = new Receiver();
+            Senders             = new List<Sender>();
+            Receiver            = new Receiver();
+            _pendingSigmaTasks  = new List<Sigma>();
+            _lockPendingSigmas  = new object();
 
             Receiver.MessageCameTriggered += ReceiveMessage;
             Receiver.Listen();
@@ -35,7 +38,7 @@ namespace BUS_DAA_SIGMA
                     connection.Connect();
                     Senders.Add(connection);
 
-                    MessageHeader handShake = new MessageHeader(MessageHeader.MessageType.TCPHANDSHAKE, Encoding.ASCII.GetBytes(Receiver.LocalEndPoint.Address.ToString() + "@" + Receiver.LocalEndPoint.Port.ToString()));
+                    Message<MessageHeader.BasicType> handShake = new Message<MessageHeader.BasicType>(MessageHeader.BasicType.TCPHANDSHAKE, Encoding.ASCII.GetBytes(Receiver.LocalEndPoint.Address.ToString() + "@" + Receiver.LocalEndPoint.Port.ToString()));
                     Send(otherAddress, otherPort, handShake.ConvertToBytes());
                 }
                 else
@@ -52,20 +55,21 @@ namespace BUS_DAA_SIGMA
             //TO DO
         }
 
-        private static void ReceiveMessage(IPEndPoint endPoint)
+        private static async Task ReceiveMessage(IPEndPoint endPoint)
         {
-            byte[] messageBytes = Receiver.ReceiveFrom(endPoint).Dequeue();
-            MessageHeader message = new MessageHeader(messageBytes);
+            byte[] messageBytes                         = Receiver.ReceiveFrom(endPoint).Dequeue();
+            Message<MessageHeader.BasicType> message    = new Message<MessageHeader.BasicType>(messageBytes);
 
             switch (message.Signaling)
             {
-                case MessageHeader.MessageType.TCPHANDSHAKE:
+                case MessageHeader.BasicType.TCPHANDSHAKE:
                     HandleTCPHandShake(message.Payload);
                     break;
-                case MessageHeader.MessageType.POST:
+                case MessageHeader.BasicType.POST:
                     HandlePost(endPoint, message.Payload);
                     break;
-                case MessageHeader.MessageType.SIGMA:
+                case MessageHeader.BasicType.SIGMA:
+                    await HandleSigma(endPoint);
                     break;
                 default:
                     UI.Print("Unrecognized signaling message");
@@ -82,10 +86,26 @@ namespace BUS_DAA_SIGMA
                 UI.Print("You cannot send message to disconnected host");
         }
 
+        public static void BeginKeyExchange(IPAddress otherAddress, int otherPort)
+        {
+            Sender sender = Senders.FirstOrDefault(x => x.RemoteEndPoint.Address.ToString() == otherAddress.ToString() && x.RemoteEndPoint.Port == otherPort);
+            if (sender.SymmetricKey == null)
+            {
+                var sigma = new Sigma(sender);
+                Send(otherAddress, otherPort, 
+                    new Message<MessageHeader.BasicType>(MessageHeader.BasicType.SIGMA, 
+                    new Message<MessageHeader.SigmaType>(MessageHeader.SigmaType.PHello, sigma.GetPHello()).
+                    ConvertToBytes()).
+                    ConvertToBytes());
+                _pendingSigmaTasks.Add(sigma);
+            }
+            else
+                UI.Print("You have already exchanged the key");
+        }
         #region Handlers
         private static void HandleTCPHandShake(byte[] payload)
         {
-            string remoteEndPoint    = Encoding.ASCII.GetString(payload).Replace("\0", "");
+            string remoteEndPoint    = Encoding.ASCII.GetString(payload).Replace("\0", string.Empty);
             string[] splitedEndPoint = remoteEndPoint.Split('@');
             try
             {
@@ -98,6 +118,15 @@ namespace BUS_DAA_SIGMA
         }
 
         private static void HandlePost(IPEndPoint other, byte[] payload) => UI.Print($"[{other.Address}:" + $"{other.Port}]" + Encoding.ASCII.GetString(payload).Replace("\0", ""));
+
+        private static Task HandleSigma(IPEndPoint other)
+        {
+            return Task.Run(async () => 
+            {
+                lock (_lockPendingSigmas) _pendingSigmaTasks.FirstOrDefault(x => x._connection.RemoteEndPoint.Address.ToString() == other.Address.ToString()
+                && x._connection.RemoteEndPoint.Port.ToString() == other.Port.ToString()).DispatchKeyExchange();
+            });
+        }
         #endregion
     }
 }

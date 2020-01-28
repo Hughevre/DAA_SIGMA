@@ -11,12 +11,12 @@ namespace BUS_DAA_SIGMA
     {
         void Execute();
     }
-
+    /*
     interface ICommandAsync : ICommand
     {
         Task ExecuteAsync();
     }
-
+    */
 #region Commands
     class ConnectCommand : ICommand
     {
@@ -53,7 +53,33 @@ namespace BUS_DAA_SIGMA
 
             try
             {
-                User.Send(IPAddress.Parse(address), int.Parse(port), new MessageHeader(MessageHeader.MessageType.POST, Encoding.ASCII.GetBytes(message)).ConvertToBytes());
+                User.Send(IPAddress.Parse(address), 
+                    int.Parse(port), 
+                    new Message<MessageHeader.BasicType>(MessageHeader.BasicType.POST, 
+                    Encoding.ASCII.GetBytes(message)).
+                    ConvertToBytes());
+            }
+            catch (Exception ex)
+            {
+                UI.Print(ex.Message);
+            }
+        }
+
+        public void Execute() => _execute();
+    }
+
+    class KECommand : ICommand
+    {
+        private void _execute()
+        {
+            UI.Print("Give a remote end point address: ");
+            var address = Console.ReadLine();
+            UI.Print("Give a remote end point port: ");
+            var port = Console.ReadLine();
+
+            try
+            {
+                User.BeginKeyExchange(IPAddress.Parse(address), int.Parse(port));
             }
             catch (Exception ex)
             {
@@ -87,6 +113,11 @@ namespace BUS_DAA_SIGMA
         public override ICommand Create() => new SendCommand();
     }
 
+    class KEFactory : Factory
+    {
+        public override ICommand Create() => new KECommand();
+    }
+
     class PortFactory : Factory
     {
         public override ICommand Create() => new PortCommand();
@@ -99,6 +130,7 @@ namespace BUS_DAA_SIGMA
         {
             Connect,
             Send,
+            KE,
             Port
         }
 
